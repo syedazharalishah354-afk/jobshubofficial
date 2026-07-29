@@ -1,0 +1,6 @@
+{
+  "name": "JobsHubOfficial",
+  "description": "Official Job Provider & Application Portal with Step-by-Step CNIC Verification and Admin Payment Verification",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
