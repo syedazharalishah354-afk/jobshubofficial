@@ -1549,85 +1549,166 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                   </div>
                 </div>
 
+                {/* Payment & Transaction Proof Details */}
+                <div className="space-y-3 bg-blue-50/70 p-4 rounded-xl border border-blue-200">
+                  <h5 className="font-black text-blue-950 uppercase tracking-wider text-[11px] flex items-center justify-between">
+                    <span>2. Fee Payment &amp; Screenshot Proof</span>
+                    <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] rounded font-bold">
+                      {selectedApp.paymentMethod || 'JazzCash'}
+                    </span>
+                  </h5>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                    <div className="bg-white p-3 rounded-lg border border-blue-100 space-y-1">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Payment Method</span>
+                      <strong className="text-blue-900 font-black text-xs block">{selectedApp.paymentMethod || 'JazzCash'}</strong>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-blue-100 space-y-1">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Transaction ID / Sender</span>
+                      <strong className="text-slate-900 font-mono font-bold text-xs block select-all">
+                        {selectedApp.paymentTxnId || selectedApp.transactionId || 'N/A'}
+                      </strong>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-blue-100 space-y-1">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Payment Status</span>
+                      <strong className="text-emerald-700 font-extrabold text-xs block">
+                        {selectedApp.status === 'Submitted Successfully' ? 'Auto-Approved / Fee Received' : selectedApp.status}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Fee Payment Screenshot Image Preview & Download */}
+                  <div className="bg-white p-3 rounded-xl border border-blue-200">
+                    <span className="text-[10px] font-extrabold text-slate-600 uppercase block mb-2">Fee Payment Screenshot Proof</span>
+                    {selectedApp.paymentScreenshotUrl ? (
+                      <div className="flex flex-col sm:flex-row items-center gap-3">
+                        <img src={selectedApp.paymentScreenshotUrl} alt="Payment Screenshot Proof" className="h-28 w-full sm:w-48 object-cover rounded-lg border border-slate-300 shadow-xs" />
+                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                          <a href={selectedApp.paymentScreenshotUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg text-center transition-colors">
+                            View Full Screenshot &rarr;
+                          </a>
+                          <a href={selectedApp.paymentScreenshotUrl} download={`Payment_Proof_${selectedApp.cnic || 'Applicant'}.jpg`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg text-center transition-colors">
+                            Download Screenshot 📥
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 italic text-xs">No payment screenshot attached.</span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Uploaded Documents List & Image Previews */}
                 <div className="space-y-3">
-                  <h5 className="font-black text-slate-900 uppercase tracking-wider text-[11px]">2. Uploaded Supporting Documents</h5>
+                  <h5 className="font-black text-slate-900 uppercase tracking-wider text-[11px]">3. Uploaded Candidate Documents</h5>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     
                     {/* CNIC Front */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
                       <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CNIC Front</span>
                       {selectedApp.cnicFrontUrl ? (
-                        <a href={selectedApp.cnicFrontUrl} target="_blank" rel="noopener noreferrer" className="block relative group">
-                          <img src={selectedApp.cnicFrontUrl} alt="CNIC Front" className="h-24 w-full object-cover rounded border" />
-                          <span className="text-[9px] text-blue-600 font-bold block mt-1">View Full Image &rarr;</span>
-                        </a>
+                        <div className="space-y-1.5">
+                          <img src={selectedApp.cnicFrontUrl} alt="CNIC Front" className="h-20 w-full object-cover rounded border" />
+                          <div className="flex flex-col gap-1">
+                            <a href={selectedApp.cnicFrontUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block hover:underline">
+                              View Full &rarr;
+                            </a>
+                            <a href={selectedApp.cnicFrontUrl} download={`CNIC_Front_${selectedApp.cnic}.jpg`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
+                              Download 📥
+                            </a>
+                          </div>
+                        </div>
                       ) : (
                         <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
                       )}
                     </div>
 
                     {/* CNIC Back */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
                       <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CNIC Back</span>
                       {selectedApp.cnicBackUrl ? (
-                        <a href={selectedApp.cnicBackUrl} target="_blank" rel="noopener noreferrer" className="block relative group">
-                          <img src={selectedApp.cnicBackUrl} alt="CNIC Back" className="h-24 w-full object-cover rounded border" />
-                          <span className="text-[9px] text-blue-600 font-bold block mt-1">View Full Image &rarr;</span>
-                        </a>
+                        <div className="space-y-1.5">
+                          <img src={selectedApp.cnicBackUrl} alt="CNIC Back" className="h-20 w-full object-cover rounded border" />
+                          <div className="flex flex-col gap-1">
+                            <a href={selectedApp.cnicBackUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block hover:underline">
+                              View Full &rarr;
+                            </a>
+                            <a href={selectedApp.cnicBackUrl} download={`CNIC_Back_${selectedApp.cnic}.jpg`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
+                              Download 📥
+                            </a>
+                          </div>
+                        </div>
                       ) : (
                         <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
                       )}
                     </div>
 
                     {/* Passport Photo */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
                       <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Passport Photo</span>
                       {selectedApp.passportPhotoUrl ? (
-                        <a href={selectedApp.passportPhotoUrl} target="_blank" rel="noopener noreferrer" className="block relative group">
-                          <img src={selectedApp.passportPhotoUrl} alt="Passport Photo" className="h-24 w-full object-cover rounded border" />
-                          <span className="text-[9px] text-blue-600 font-bold block mt-1">View Full Image &rarr;</span>
-                        </a>
+                        <div className="space-y-1.5">
+                          <img src={selectedApp.passportPhotoUrl} alt="Passport Photo" className="h-20 w-full object-cover rounded border" />
+                          <div className="flex flex-col gap-1">
+                            <a href={selectedApp.passportPhotoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block hover:underline">
+                              View Full &rarr;
+                            </a>
+                            <a href={selectedApp.passportPhotoUrl} download={`Passport_Photo_${selectedApp.cnic}.jpg`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
+                              Download 📥
+                            </a>
+                          </div>
+                        </div>
                       ) : (
                         <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
                       )}
                     </div>
 
                     {/* Education Cert */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Educational Certificate</span>
-                      {selectedApp.educationCertUrl ? (
-                        <a href={selectedApp.educationCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[11px] hover:underline block py-2">
-                          View Certificate &rarr;
-                        </a>
-                      ) : (
-                        <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
-                      )}
-                    </div>
+                    {selectedApp.educationCertUrl && (
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Educational Certificate</span>
+                        <div className="space-y-1">
+                          <a href={selectedApp.educationCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] hover:underline block">
+                            View Document &rarr;
+                          </a>
+                          <a href={selectedApp.educationCertUrl} download target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
+                            Download 📥
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Experience Cert */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Experience Certificate</span>
-                      {selectedApp.experienceCertUrl ? (
-                        <a href={selectedApp.experienceCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[11px] hover:underline block py-2">
-                          View Experience Cert &rarr;
-                        </a>
-                      ) : (
-                        <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
-                      )}
-                    </div>
+                    {selectedApp.experienceCertUrl && (
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Experience Certificate</span>
+                        <div className="space-y-1">
+                          <a href={selectedApp.experienceCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] hover:underline block">
+                            View Experience Cert &rarr;
+                          </a>
+                          <a href={selectedApp.experienceCertUrl} download target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
+                            Download 📥
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
                     {/* CV / Resume */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CV / Resume Document</span>
-                      {selectedApp.resumeUrl ? (
-                        <a href={selectedApp.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[11px] hover:underline block py-2">
-                          Download CV &rarr;
-                        </a>
-                      ) : (
-                        <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
-                      )}
-                    </div>
+                    {selectedApp.resumeUrl && (
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CV / Resume</span>
+                        <div className="space-y-1">
+                          <a href={selectedApp.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] hover:underline block">
+                            View CV Document &rarr;
+                          </a>
+                          <a href={selectedApp.resumeUrl} download target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
+                            Download 📥
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
                   </div>
                 </div>

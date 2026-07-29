@@ -27,6 +27,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
 }) => {
   // Wizard Stage: 'form' = Input details & docs, 'processing' = 30s timer, 'completed' = Success & Slip
   const [wizardStage, setWizardStage] = useState<'form' | 'processing' | 'completed'>('form');
+  const [formStep, setFormStep] = useState<1 | 2>(1);
   const [submittedApp, setSubmittedApp] = useState<Application | null>(null);
 
   // 30-second Timer state
@@ -59,7 +60,6 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [experience, setExperience] = useState('Fresh');
-  const [skills, setSkills] = useState('');
 
   // Payment State
   const [paymentMethod, setPaymentMethod] = useState<'JazzCash' | 'Easypaisa'>('JazzCash');
@@ -67,7 +67,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
   const [paymentScreenshotPreview, setPaymentScreenshotPreview] = useState<string | null>(null);
   const [paymentTxnId, setPaymentTxnId] = useState('');
 
-  // Files & Previews
+  // Required CNIC & ID Document Files & Previews
   const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
   const [cnicFrontPreview, setCnicFrontPreview] = useState<string | null>(null);
 
@@ -76,18 +76,6 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
 
   const [passportPhotoFile, setPassportPhotoFile] = useState<File | null>(null);
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
-
-  const [educationCertFile, setEducationCertFile] = useState<File | null>(null);
-  const [educationCertName, setEducationCertName] = useState<string | null>(null);
-
-  const [experienceCertFile, setExperienceCertFile] = useState<File | null>(null);
-  const [experienceCertName, setExperienceCertName] = useState<string | null>(null);
-
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [resumeName, setResumeName] = useState<string | null>(null);
-
-  const [otherDocFile, setOtherDocFile] = useState<File | null>(null);
-  const [otherDocName, setOtherDocName] = useState<string | null>(null);
 
   // Validation Errors & Submission Loading
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -173,7 +161,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
     setWhatsapp(digits);
   };
 
-  const validateForm = (): boolean => {
+  const validateStep1 = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!fullName.trim()) errors.fullName = 'Full Name is required.';
@@ -205,6 +193,13 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
       errors.cnicBack = 'CNIC Back picture is required.';
     }
 
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep2 = (): boolean => {
+    const errors: Record<string, string> = {};
+
     if (!paymentScreenshotPreview && !paymentScreenshotFile) {
       errors.paymentScreenshot = 'Fee payment screenshot proof is required.';
     }
@@ -213,9 +208,28 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
     return Object.keys(errors).length === 0;
   };
 
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateStep1()) {
+      setFormErrors({});
+      setFormStep(2);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setFormErrors({});
+    setFormStep(1);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateStep1()) {
+      setFormStep(1);
+      return;
+    }
+    if (!validateStep2()) {
+      return;
+    }
 
     setSubmitting(true);
     setFormErrors({});
@@ -224,19 +238,11 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
       let cnicFrontUrl = cnicFrontPreview || '';
       let cnicBackUrl = cnicBackPreview || '';
       let passportPhotoUrl = passportPhotoPreview || null;
-      let educationCertUrl = null;
-      let experienceCertUrl = null;
-      let resumeUrl = null;
-      let otherDocUrl = null;
       let paymentScreenshotUrl = paymentScreenshotPreview || null;
 
       if (cnicFrontFile) cnicFrontUrl = await uploadImageFile(cnicFrontFile);
       if (cnicBackFile) cnicBackUrl = await uploadImageFile(cnicBackFile);
       if (passportPhotoFile) passportPhotoUrl = await uploadImageFile(passportPhotoFile);
-      if (educationCertFile) educationCertUrl = await uploadImageFile(educationCertFile);
-      if (experienceCertFile) experienceCertUrl = await uploadImageFile(experienceCertFile);
-      if (resumeFile) resumeUrl = await uploadImageFile(resumeFile);
-      if (otherDocFile) otherDocUrl = await uploadImageFile(otherDocFile);
       if (paymentScreenshotFile) paymentScreenshotUrl = await uploadImageFile(paymentScreenshotFile);
 
       const selectedJobObj = availableJobsList.find(j => j.title === jobPosition);
@@ -252,7 +258,6 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
         whatsapp: whatsapp || mobile,
         qualification,
         experience,
-        skills,
         address,
         city,
         postalCode,
@@ -262,10 +267,6 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
         cnicFrontUrl,
         cnicBackUrl,
         passportPhotoUrl,
-        educationCertUrl,
-        experienceCertUrl,
-        resumeUrl,
-        otherDocUrl,
         paymentMethod,
         paymentScreenshotUrl,
         paymentTxnId: paymentTxnId.trim() || null
@@ -316,14 +317,32 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
           {wizardStage === 'form' && (
             <div className="max-w-3xl mx-auto space-y-6">
               
-              <div className="border-b border-slate-200 pb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-[11px] font-extrabold uppercase tracking-wider rounded-full inline-block mb-2">
-                  Official Application Form
-                </span>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Complete Candidate Application</h1>
-                <p className="text-slate-500 text-xs sm:text-sm mt-1">
-                  Please complete all required details and upload your supporting documents to submit your application.
-                </p>
+              {/* Header & Step Bar */}
+              <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-3 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-extrabold uppercase tracking-wider rounded-full inline-block">
+                      Step {formStep} of 2
+                    </span>
+                    <span className="text-xs font-bold text-slate-500">
+                      {formStep === 1 ? 'Personal Info & CNIC Upload' : 'Fee Payment & Final Submission'}
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    {formStep === 1 ? 'Complete Candidate Details' : 'Application Fee & Payment Details'}
+                  </h1>
+                </div>
+
+                {/* Step Indicator Bar */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${formStep === 1 ? 'bg-blue-600 text-white shadow-md' : 'bg-emerald-600 text-white'}`}>
+                    1
+                  </div>
+                  <div className={`w-8 h-1 rounded-full ${formStep === 2 ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${formStep === 2 ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
+                    2
+                  </div>
+                </div>
               </div>
 
               {formErrors.server && (
@@ -333,542 +352,515 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                
-                {/* 1. JOB SELECTION & QUALIFICATION */}
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-                  <h3 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Briefcase className="w-4 h-4 text-blue-600" />
-                    1. Select Qualification &amp; Target Position
-                  </h3>
+              {/* ================= FORM STEP 1: PERSONAL DETAILS & CNIC ================= */}
+              {formStep === 1 && (
+                <form onSubmit={handleNextStep} className="space-y-6">
+                  
+                  {/* 1. JOB SELECTION & QUALIFICATION */}
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
+                    <h3 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Briefcase className="w-4 h-4 text-blue-600" />
+                      1. Select Qualification &amp; Target Position
+                    </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">
-                        Qualification Filter *
-                      </label>
-                      <select
-                        value={qualification}
-                        onChange={(e) => {
-                          const newQual = e.target.value;
-                          setQualification(newQual);
-                          localStorage.setItem('user_qualification', newQual);
-                        }}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
-                      >
-                        <option value="Primary">Primary</option>
-                        <option value="Middle">Middle</option>
-                        <option value="Matric">Matric</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Diploma">Diploma</option>
-                        <option value="Technical Diploma">Technical Diploma</option>
-                        <option value="Certification">Certification</option>
-                        <option value="Associate Degree">Associate Degree</option>
-                        <option value="Bachelor">Bachelor</option>
-                        <option value="BS">BS</option>
-                        <option value="Master">Master</option>
-                        <option value="Other Higher Qualification">Other Higher Qualification</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">
-                        Select Applied Job Position *
-                      </label>
-                      <select
-                        value={jobPosition}
-                        onChange={(e) => setJobPosition(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
-                      >
-                        {displayedJobsOptions.map(j => (
-                          <option key={j.id} value={j.title}>
-                            {j.title} ({j.department})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {selectedJobObj && (
-                    <div className="bg-blue-900 text-white p-3.5 rounded-xl flex items-center justify-between text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <span className="text-[10px] text-blue-200 uppercase font-bold block">Job Details</span>
-                        <strong className="text-white font-black text-sm">{selectedJobObj.title}</strong>
-                        <span className="text-blue-200 text-[11px] block mt-0.5">Category: {selectedJobObj.category} &bull; Min. Education: {selectedJobObj.minQualification}</span>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">
+                          Qualification Filter *
+                        </label>
+                        <select
+                          value={qualification}
+                          onChange={(e) => {
+                            const newQual = e.target.value;
+                            setQualification(newQual);
+                            localStorage.setItem('user_qualification', newQual);
+                          }}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
+                        >
+                          <option value="Primary">Primary</option>
+                          <option value="Middle">Middle</option>
+                          <option value="Matric">Matric</option>
+                          <option value="Intermediate">Intermediate</option>
+                          <option value="Diploma">Diploma</option>
+                          <option value="Technical Diploma">Technical Diploma</option>
+                          <option value="Certification">Certification</option>
+                          <option value="Associate Degree">Associate Degree</option>
+                          <option value="Bachelor">Bachelor</option>
+                          <option value="BS">BS</option>
+                          <option value="Master">Master</option>
+                          <option value="Other Higher Qualification">Other Higher Qualification</option>
+                        </select>
                       </div>
-                      <span className="px-2.5 py-1 bg-white/20 text-white text-[10px] font-bold rounded-md uppercase">
-                        ID: {selectedJobObj.id}
-                      </span>
-                    </div>
-                  )}
-                </div>
 
-                {/* 2. PERSONAL INFORMATION */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
-                    <User className="w-4 h-4 text-blue-600" />
-                    2. Applicant Personal Information
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    
-                    {/* Full Name */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Full Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Muhammad Ali"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.fullName && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.fullName}</p>}
-                    </div>
-
-                    {/* Father Name */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Father's Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={fatherName}
-                        onChange={(e) => setFatherName(e.target.value)}
-                        placeholder="e.g. Ghulam Hassan"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.fatherName && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.fatherName}</p>}
-                    </div>
-
-                    {/* CNIC */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">CNIC / National ID *</label>
-                      <input
-                        type="text"
-                        required
-                        value={cnic}
-                        onChange={(e) => handleCnicChange(e.target.value)}
-                        placeholder="35202-0000000-1"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.cnic && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.cnic}</p>}
-                    </div>
-
-                    {/* DOB */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Date of Birth *</label>
-                      <input
-                        type="date"
-                        required
-                        value={dob}
-                        onChange={(e) => setDob(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.dob && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.dob}</p>}
-                    </div>
-
-                    {/* Gender */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Gender *</label>
-                      <select
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Email Address *</label>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="ali@example.com"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.email && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.email}</p>}
-                    </div>
-
-                    {/* Mobile Number */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Mobile Number *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={mobile}
-                        onChange={(e) => handleMobileChange(e.target.value)}
-                        placeholder="03001234567"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.mobile && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.mobile}</p>}
-                    </div>
-
-                    {/* WhatsApp Number */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">WhatsApp Number</label>
-                      <input
-                        type="tel"
-                        value={whatsapp}
-                        onChange={(e) => handleWhatsappChange(e.target.value)}
-                        placeholder="03001234567 (Optional)"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-
-                    {/* City / District */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">City / District *</label>
-                      <input
-                        type="text"
-                        required
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="e.g. Lahore, Rawalpindi"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.city && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.city}</p>}
-                    </div>
-
-                    {/* Experience */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Total Experience</label>
-                      <select
-                        value={experience}
-                        onChange={(e) => setExperience(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      >
-                        <option value="Fresh">Fresh / No Experience</option>
-                        <option value="1 Year">1 Year</option>
-                        <option value="2 Years">2 Years</option>
-                        <option value="3-5 Years">3-5 Years</option>
-                        <option value="5+ Years">5+ Years</option>
-                      </select>
-                    </div>
-
-                    {/* Skills */}
-                    <div className="sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Key Skills &amp; Experience Summary</label>
-                      <input
-                        type="text"
-                        value={skills}
-                        onChange={(e) => setSkills(e.target.value)}
-                        placeholder="e.g. MS Office, Typing 40 WPM, Communication, Customer Service"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-
-                    {/* Address */}
-                    <div className="sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Complete Residential Address *</label>
-                      <input
-                        type="text"
-                        required
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="House #, Street #, Sector / Colony, Tehsil / City"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      {formErrors.address && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.address}</p>}
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* 3. SUPPORTING DOCUMENTS UPLOAD */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
-                    <Upload className="w-4 h-4 text-blue-600" />
-                    3. Upload Required Supporting Documents
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    
-                    {/* CNIC Front */}
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
-                      <Upload className="w-5 h-5 text-blue-600 mb-1" />
-                      <span className="text-xs font-bold text-slate-800">CNIC Front Image *</span>
-                      <span className="text-[9px] text-slate-400">Clear JPG or PNG</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        required
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setCnicFrontFile(file);
-                            setCnicFrontPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      {cnicFrontPreview && (
-                        <div className="mt-2 w-full">
-                          <img src={cnicFrontPreview} alt="CNIC Front" className="h-16 w-full object-cover rounded border" />
-                          <span className="text-[10px] text-emerald-600 font-bold block mt-1">Loaded ✓</span>
-                        </div>
-                      )}
-                      {formErrors.cnicFront && <p className="text-[10px] text-rose-600 mt-1">{formErrors.cnicFront}</p>}
-                    </div>
-
-                    {/* CNIC Back */}
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
-                      <Upload className="w-5 h-5 text-blue-600 mb-1" />
-                      <span className="text-xs font-bold text-slate-800">CNIC Back Image *</span>
-                      <span className="text-[9px] text-slate-400">Clear JPG or PNG</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        required
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setCnicBackFile(file);
-                            setCnicBackPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      {cnicBackPreview && (
-                        <div className="mt-2 w-full">
-                          <img src={cnicBackPreview} alt="CNIC Back" className="h-16 w-full object-cover rounded border" />
-                          <span className="text-[10px] text-emerald-600 font-bold block mt-1">Loaded ✓</span>
-                        </div>
-                      )}
-                      {formErrors.cnicBack && <p className="text-[10px] text-rose-600 mt-1">{formErrors.cnicBack}</p>}
-                    </div>
-
-                    {/* Passport Photo */}
-                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
-                      <span className="text-xs font-bold text-slate-800">Passport-Size Photo</span>
-                      <span className="text-[9px] text-slate-400">White background photo</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setPassportPhotoFile(file);
-                            setPassportPhotoPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      {passportPhotoPreview && (
-                        <span className="text-[10px] text-emerald-600 font-bold mt-1">Passport Photo Loaded ✓</span>
-                      )}
-                    </div>
-
-                    {/* Educational Certificates */}
-                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
-                      <span className="text-xs font-bold text-slate-800">Educational Certificate</span>
-                      <span className="text-[9px] text-slate-400">Degree / Transcript / Result Card</span>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf,.doc,.docx"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setEducationCertFile(file);
-                            setEducationCertName(file.name);
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      {educationCertName && (
-                        <span className="text-[10px] text-emerald-600 font-bold mt-1 truncate max-w-full px-2">{educationCertName} ✓</span>
-                      )}
-                    </div>
-
-                    {/* Experience Certificates */}
-                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
-                      <span className="text-xs font-bold text-slate-800">Experience Certificate</span>
-                      <span className="text-[9px] text-slate-400">Letter or Service Slip (Optional)</span>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf,.doc,.docx"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setExperienceCertFile(file);
-                            setExperienceCertName(file.name);
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      {experienceCertName && (
-                        <span className="text-[10px] text-emerald-600 font-bold mt-1 truncate max-w-full px-2">{experienceCertName} ✓</span>
-                      )}
-                    </div>
-
-                    {/* CV / Resume */}
-                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
-                      <span className="text-xs font-bold text-slate-800">CV / Resume Document</span>
-                      <span className="text-[9px] text-slate-400">PDF, DOCX or Image</span>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf,.doc,.docx"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setResumeFile(file);
-                            setResumeName(file.name);
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      {resumeName && (
-                        <span className="text-[10px] text-emerald-600 font-bold mt-1 truncate max-w-full px-2">{resumeName} ✓</span>
-                      )}
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* 4. FEE PAYMENT & TRANSACTION PROOF */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    4. Fee Payment &amp; Payment Proof Upload *
-                  </h3>
-
-                  <div className="bg-blue-50/70 rounded-2xl p-4 border border-blue-100 space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-blue-200">
                       <div>
-                        <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block">Standard Application Fee</span>
-                        <strong className="text-lg font-black text-blue-950">PKR {config.applicationFee || 300}</strong>
-                        <span className="text-[11px] text-slate-500 block">Covers document indexing, CNIC verification &amp; roll number processing</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('JazzCash')}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            paymentMethod === 'JazzCash'
-                              ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                          }`}
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">
+                          Select Applied Job Position *
+                        </label>
+                        <select
+                          value={jobPosition}
+                          onChange={(e) => setJobPosition(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                         >
-                          JazzCash
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('Easypaisa')}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            paymentMethod === 'Easypaisa'
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          Easypaisa
-                        </button>
+                          {displayedJobsOptions.map(j => (
+                            <option key={j.id} value={j.title}>
+                              {j.title} ({j.department})
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
-                    {/* Selected Payment Method Account Details */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500 font-bold uppercase text-[10px]">Payment Account ({paymentMethod})</span>
-                        <span className="text-emerald-700 font-extrabold text-[10px] bg-emerald-50 px-2 py-0.5 rounded">Active Official Account</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {selectedJobObj && (
+                      <div className="bg-blue-900 text-white p-3.5 rounded-xl flex items-center justify-between text-xs">
                         <div>
-                          <span className="text-[10px] text-slate-400 font-semibold block">Account Number</span>
-                          <strong className="text-blue-900 font-mono font-black text-sm select-all">
-                            {paymentMethod === 'JazzCash'
-                              ? (config.jazzcash?.accountNumber || '0301-8899771')
-                              : (config.easypaisa?.accountNumber || '0301-8899771')}
-                          </strong>
+                          <span className="text-[10px] text-blue-200 uppercase font-bold block">Job Details</span>
+                          <strong className="text-white font-black text-sm">{selectedJobObj.title}</strong>
+                          <span className="text-blue-200 text-[11px] block mt-0.5">Category: {selectedJobObj.category} &bull; Min. Education: {selectedJobObj.minQualification}</span>
                         </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-semibold block">Account Title</span>
-                          <strong className="text-slate-900 font-bold">
-                            {paymentMethod === 'JazzCash'
-                              ? (config.jazzcash?.accountTitle || 'JobsHub Official')
-                              : (config.easypaisa?.accountTitle || 'JobsHub Official')}
-                          </strong>
-                        </div>
+                        <span className="px-2.5 py-1 bg-white/20 text-white text-[10px] font-bold rounded-md uppercase">
+                          ID: {selectedJobObj.id}
+                        </span>
                       </div>
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Screenshot Upload & Txn ID */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                      <div className="border-2 border-dashed border-blue-200 rounded-xl p-4 bg-white flex flex-col items-center justify-center text-center relative hover:bg-slate-50 transition-colors cursor-pointer">
+                  {/* 2. PERSONAL INFORMATION */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+                      <User className="w-4 h-4 text-blue-600" />
+                      2. Applicant Personal Information
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      {/* Full Name */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="e.g. Muhammad Ali"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.fullName && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.fullName}</p>}
+                      </div>
+
+                      {/* Father Name */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Father's Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={fatherName}
+                          onChange={(e) => setFatherName(e.target.value)}
+                          placeholder="e.g. Ghulam Hassan"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.fatherName && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.fatherName}</p>}
+                      </div>
+
+                      {/* CNIC */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">CNIC / National ID *</label>
+                        <input
+                          type="text"
+                          required
+                          value={cnic}
+                          onChange={(e) => handleCnicChange(e.target.value)}
+                          placeholder="35202-0000000-1"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.cnic && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.cnic}</p>}
+                      </div>
+
+                      {/* DOB */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Date of Birth *</label>
+                        <input
+                          type="date"
+                          required
+                          value={dob}
+                          onChange={(e) => setDob(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.dob && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.dob}</p>}
+                      </div>
+
+                      {/* Gender */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Gender *</label>
+                        <select
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        >
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      {/* Email */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Email Address *</label>
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="ali@example.com"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.email && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.email}</p>}
+                      </div>
+
+                      {/* Mobile Number */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Mobile Number *</label>
+                        <input
+                          type="tel"
+                          required
+                          value={mobile}
+                          onChange={(e) => handleMobileChange(e.target.value)}
+                          placeholder="03001234567"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.mobile && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.mobile}</p>}
+                      </div>
+
+                      {/* WhatsApp Number */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">WhatsApp Number</label>
+                        <input
+                          type="tel"
+                          value={whatsapp}
+                          onChange={(e) => handleWhatsappChange(e.target.value)}
+                          placeholder="03001234567 (Optional)"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                      </div>
+
+                      {/* City / District */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">City / District *</label>
+                        <input
+                          type="text"
+                          required
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="e.g. Lahore, Rawalpindi"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.city && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.city}</p>}
+                      </div>
+
+                      {/* Experience */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Total Experience</label>
+                        <select
+                          value={experience}
+                          onChange={(e) => setExperience(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        >
+                          <option value="Fresh">Fresh / No Experience</option>
+                          <option value="1 Year">1 Year</option>
+                          <option value="2 Years">2 Years</option>
+                          <option value="3-5 Years">3-5 Years</option>
+                          <option value="5+ Years">5+ Years</option>
+                        </select>
+                      </div>
+
+                      {/* Address */}
+                      <div className="sm:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-1">Complete Residential Address *</label>
+                        <input
+                          type="text"
+                          required
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="House #, Street #, Sector / Colony, Tehsil / City"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        {formErrors.address && <p className="text-[10px] text-rose-600 mt-0.5">{formErrors.address}</p>}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* 3. SUPPORTING CNIC & PICTURE UPLOADS */}
+                  <div className="space-y-4 pt-2">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+                      <Upload className="w-4 h-4 text-blue-600" />
+                      3. Required Identity Documents (CNIC Front &amp; Back) *
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      
+                      {/* CNIC Front */}
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
                         <Upload className="w-5 h-5 text-blue-600 mb-1" />
-                        <span className="text-xs font-bold text-slate-800">Upload Payment Screenshot *</span>
-                        <span className="text-[9px] text-slate-400">Clear transaction receipt image</span>
+                        <span className="text-xs font-bold text-slate-800">CNIC Front Image *</span>
+                        <span className="text-[9px] text-slate-400">Clear JPG or PNG</span>
                         <input
                           type="file"
                           accept="image/*"
-                          required
                           onChange={(e) => {
                             if (e.target.files && e.target.files[0]) {
                               const file = e.target.files[0];
-                              setPaymentScreenshotFile(file);
-                              setPaymentScreenshotPreview(URL.createObjectURL(file));
+                              setCnicFrontFile(file);
+                              setCnicFrontPreview(URL.createObjectURL(file));
                             }
                           }}
                           className="absolute inset-0 opacity-0 cursor-pointer"
                         />
-                        {paymentScreenshotPreview && (
+                        {cnicFrontPreview && (
                           <div className="mt-2 w-full">
-                            <img src={paymentScreenshotPreview} alt="Payment Screenshot" className="h-16 w-full object-cover rounded border" />
-                            <span className="text-[10px] text-emerald-600 font-bold block mt-1">Payment Proof Loaded ✓</span>
+                            <img src={cnicFrontPreview} alt="CNIC Front" className="h-16 w-full object-cover rounded border" />
+                            <span className="text-[10px] text-emerald-600 font-bold block mt-1">Loaded ✓</span>
                           </div>
                         )}
-                        {formErrors.paymentScreenshot && <p className="text-[10px] text-rose-600 mt-1">{formErrors.paymentScreenshot}</p>}
+                        {formErrors.cnicFront && <p className="text-[10px] text-rose-600 mt-1">{formErrors.cnicFront}</p>}
                       </div>
 
-                      <div className="flex flex-col justify-center space-y-2">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block">
-                          Transaction ID / Sender Number (Optional)
-                        </label>
+                      {/* CNIC Back */}
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
+                        <Upload className="w-5 h-5 text-blue-600 mb-1" />
+                        <span className="text-xs font-bold text-slate-800">CNIC Back Image *</span>
+                        <span className="text-[9px] text-slate-400">Clear JPG or PNG</span>
                         <input
-                          type="text"
-                          value={paymentTxnId}
-                          onChange={(e) => setPaymentTxnId(e.target.value)}
-                          placeholder="e.g. 03001234567 or TRX-998823"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              setCnicBackFile(file);
+                              setCnicBackPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
                         />
-                        <p className="text-[10px] text-slate-400">
-                          Providing transaction ID helps in instant automated database matching.
-                        </p>
+                        {cnicBackPreview && (
+                          <div className="mt-2 w-full">
+                            <img src={cnicBackPreview} alt="CNIC Back" className="h-16 w-full object-cover rounded border" />
+                            <span className="text-[10px] text-emerald-600 font-bold block mt-1">Loaded ✓</span>
+                          </div>
+                        )}
+                        {formErrors.cnicBack && <p className="text-[10px] text-rose-600 mt-1">{formErrors.cnicBack}</p>}
+                      </div>
+
+                      {/* Passport Photo */}
+                      <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center text-center relative hover:bg-slate-100 transition-colors cursor-pointer">
+                        <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                        <span className="text-xs font-bold text-slate-800">Passport Photo</span>
+                        <span className="text-[9px] text-slate-400">White background (Optional)</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              setPassportPhotoFile(file);
+                              setPassportPhotoPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        {passportPhotoPreview && (
+                          <div className="mt-2 w-full">
+                            <img src={passportPhotoPreview} alt="Passport Photo" className="h-16 w-full object-cover rounded border" />
+                            <span className="text-[10px] text-emerald-600 font-bold block mt-1">Photo Loaded ✓</span>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Next Step CTA */}
+                  <div className="pt-6 border-t border-slate-200 flex items-center justify-between">
+                    <p className="text-[11px] text-slate-500 max-w-sm">
+                      Press <strong>Next</strong> to proceed to Application Fee Payment &amp; Screenshot Upload.
+                    </p>
+
+                    <button
+                      type="submit"
+                      className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider"
+                    >
+                      <span>Next: Application Fee &amp; Payment &rarr;</span>
+                    </button>
+                  </div>
+
+                </form>
+              )}
+
+              {/* ================= FORM STEP 2: APPLICATION FEE & PAYMENT ================= */}
+              {formStep === 2 && (
+                <form onSubmit={handleSubmit} className="space-y-6">
+
+                  {/* Candidate Summary Card */}
+                  <div className="bg-slate-900 text-white p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                    <div>
+                      <span className="text-[10px] text-blue-300 font-extrabold uppercase tracking-wider block">Applicant Profile Summary</span>
+                      <strong className="text-base text-white font-black">{fullName}</strong>
+                      <span className="text-xs text-slate-300 block font-mono">CNIC: {cnic} &bull; Target Job: {jobPosition}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePrevStep}
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors cursor-pointer"
+                    >
+                      &larr; Edit Personal Info
+                    </button>
+                  </div>
+
+                  {/* FEE PAYMENT & TRANSACTION PROOF */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-200">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Application Fee Payment &amp; Screenshot Upload *
+                    </h3>
+
+                    <div className="bg-blue-50/70 rounded-2xl p-5 border border-blue-100 space-y-4">
+                      
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-blue-200">
+                        <div>
+                          <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block">Standard Application Processing Fee</span>
+                          <strong className="text-2xl font-black text-blue-950">PKR {config.applicationFee || 300}</strong>
+                          <span className="text-[11px] text-slate-500 block">Covers document indexing, identity verification &amp; tracking ID issuance</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('JazzCash')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all border cursor-pointer ${
+                              paymentMethod === 'JazzCash'
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            JazzCash
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('Easypaisa')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all border cursor-pointer ${
+                              paymentMethod === 'Easypaisa'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            Easypaisa
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Selected Payment Method Account Details */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-bold uppercase text-[10px]">Official Merchant Account ({paymentMethod})</span>
+                          <span className="text-emerald-700 font-extrabold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Active Account</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold block">Account Number</span>
+                            <strong className="text-blue-900 font-mono font-black text-base select-all">
+                              {paymentMethod === 'JazzCash'
+                                ? (config.jazzcash?.accountNumber || '0301-8899771')
+                                : (config.easypaisa?.accountNumber || '0301-8899771')}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold block">Account Title</span>
+                            <strong className="text-slate-900 font-extrabold text-sm">
+                              {paymentMethod === 'JazzCash'
+                                ? (config.jazzcash?.accountTitle || 'JobsHub Official')
+                                : (config.easypaisa?.accountTitle || 'JobsHub Official')}
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Screenshot Upload & Txn ID */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        
+                        <div className="border-2 border-dashed border-blue-200 rounded-xl p-4 bg-white flex flex-col items-center justify-center text-center relative hover:bg-slate-50 transition-colors cursor-pointer">
+                          <Upload className="w-6 h-6 text-blue-600 mb-1" />
+                          <span className="text-xs font-bold text-slate-900">Upload Payment Screenshot Proof *</span>
+                          <span className="text-[9px] text-slate-400">Clear transaction receipt or SMS screenshot</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                setPaymentScreenshotFile(file);
+                                setPaymentScreenshotPreview(URL.createObjectURL(file));
+                              }
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          {paymentScreenshotPreview && (
+                            <div className="mt-2 w-full">
+                              <img src={paymentScreenshotPreview} alt="Payment Screenshot" className="h-20 w-full object-cover rounded border" />
+                              <span className="text-[10px] text-emerald-600 font-extrabold block mt-1">Payment Proof Loaded ✓</span>
+                            </div>
+                          )}
+                          {formErrors.paymentScreenshot && <p className="text-[10px] text-rose-600 font-bold mt-1">{formErrors.paymentScreenshot}</p>}
+                        </div>
+
+                        <div className="flex flex-col justify-center space-y-2">
+                          <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block">
+                            Transaction ID / Sender Number (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={paymentTxnId}
+                            onChange={(e) => setPaymentTxnId(e.target.value)}
+                            placeholder="e.g. 03001234567 or TRX-998823"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          />
+                          <p className="text-[10px] text-slate-400">
+                            Providing transaction ID helps in instant automated database verification.
+                          </p>
+                        </div>
+
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Submit Action */}
-                <div className="pt-6 border-t border-slate-200 flex items-center justify-between">
-                  <p className="text-[11px] text-slate-500 max-w-sm">
-                    By submitting, you certify that all entered information is authentic and correct.
-                  </p>
+                  {/* Form Action Buttons */}
+                  <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={handlePrevStep}
+                      className="w-full sm:w-auto px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                    >
+                      &larr; Back to Personal Info
+                    </button>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider"
-                  >
-                    {submitting ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Uploading Documents...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>SUBMIT APPLICATION &rarr;</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                    >
+                      {submitting ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Submitting Application...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Submit Application &amp; Auto-Approve &rarr;</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
 
-              </form>
+                </form>
+              )}
             </div>
           )}
 
