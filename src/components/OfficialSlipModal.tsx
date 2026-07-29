@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Application, SystemSettings } from '../types.js';
 import { fetchConfig } from '../services/api.js';
+import { buildWhatsAppUrl } from '../utils/whatsapp.js';
 import { X, Printer, ShieldCheck, CheckCircle2, MessageCircle, FileText } from 'lucide-react';
 
 interface OfficialSlipModalProps {
@@ -21,18 +22,8 @@ export const OfficialSlipModal: React.FC<OfficialSlipModalProps> = ({ app, onClo
     window.print();
   };
 
-  const cleanPhone = (phone?: string) => {
-    if (!phone) return '923018899771';
-    let digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('0')) {
-      digits = '92' + digits.substring(1);
-    }
-    return digits || '923018899771';
-  };
-
-  const whatsappNum = config?.whatsappNumber ? cleanPhone(config.whatsappNumber) : '923018899771';
   const whatsappMsg = `Hello JobsHubOfficial, I have submitted an application. My Application ID is ${app.referenceNo}.`;
-  const whatsappUrl = `https://wa.me/${whatsappNum}?text=${encodeURIComponent(whatsappMsg)}`;
+  const whatsappUrl = buildWhatsAppUrl(config?.whatsappNumber, whatsappMsg);
 
   const qrData = `JobsHubOfficial Application Slip | Ref: ${app.referenceNo} | CNIC: ${app.cnic} | Name: ${app.fullName} | Job: ${app.jobPosition}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrData)}`;

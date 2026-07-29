@@ -93,7 +93,13 @@ export async function fetchJobs(campaignSlug?: string): Promise<JobPosition[]> {
   return filterByCampaign(DEFAULT_JOBS);
 }
 
-export async function uploadImageFile(file: File): Promise<string> {
+export async function uploadImageFile(file: File | string | null | undefined): Promise<string> {
+  if (!file) return '';
+  if (typeof file === 'string') {
+    if (file.startsWith('blob:')) return '';
+    return file;
+  }
+
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -109,15 +115,19 @@ export async function uploadImageFile(file: File): Promise<string> {
         const data = await res.json();
         if (data && data.fileUrl) return data.fileUrl;
       }
+    } else {
+      const errText = await res.text().catch(() => '');
+      console.warn('Server file upload failed:', res.status, errText);
     }
-  } catch {
-    // Fallback to client data URL
+  } catch (err) {
+    console.warn('Upload API request error:', err);
   }
 
-  return new Promise((resolve, reject) => {
+  // Fallback to Base64 Data URL if server upload fails
+  return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.onload = () => resolve((reader.result as string) || '');
+    reader.onerror = () => resolve('');
     reader.readAsDataURL(file);
   });
 }

@@ -35,9 +35,17 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Serve uploaded files statically with security headers
+// Serve uploaded files statically with security headers & CORS support
 app.use('/api/uploads', express.static(UPLOADS_DIR, {
   setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
+}));
+
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('X-Content-Type-Options', 'nosniff');
   }
 }));
@@ -312,12 +320,18 @@ app.get('/api/jobs/:id', (req: Request, res: Response) => {
 });
 
 // File Upload Endpoint
-app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded or invalid file format.' });
-  }
-  const fileUrl = `/api/uploads/${req.file.filename}`;
-  res.json({ fileUrl, filename: req.file.filename });
+app.post('/api/upload', (req: Request, res: Response) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      return res.status(400).json({ error: err.message || 'File upload failed.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded or invalid file format.' });
+    }
+    const fileUrl = `/api/uploads/${req.file.filename}`;
+    return res.json({ fileUrl, filename: req.file.filename });
+  });
 });
 
   // Step 1: Submit Application Information

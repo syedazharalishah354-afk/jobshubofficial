@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, JobPosition } from '../types.js';
 import { submitApplicationStep1, uploadImageFile } from '../services/api.js';
 import { isJobUnlocked } from '../utils/qualification.js';
+import { buildWhatsAppUrl } from '../utils/whatsapp.js';
 import { X, CheckCircle2, User, Mail, Phone, MapPin, GraduationCap, FileText, Upload, Clock, ShieldCheck, Printer, AlertTriangle, ArrowRight, ArrowLeft, RefreshCw, Building, Briefcase, Calendar, Sparkles, MessageCircle } from 'lucide-react';
 
 interface ApplicationWizardProps {
@@ -235,15 +236,34 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
     setFormErrors({});
 
     try {
-      let cnicFrontUrl = cnicFrontPreview || '';
-      let cnicBackUrl = cnicBackPreview || '';
-      let passportPhotoUrl = passportPhotoPreview || null;
-      let paymentScreenshotUrl = paymentScreenshotPreview || null;
+      let cnicFrontUrl = '';
+      let cnicBackUrl = '';
+      let passportPhotoUrl: string | null = null;
+      let paymentScreenshotUrl: string | null = null;
 
-      if (cnicFrontFile) cnicFrontUrl = await uploadImageFile(cnicFrontFile);
-      if (cnicBackFile) cnicBackUrl = await uploadImageFile(cnicBackFile);
-      if (passportPhotoFile) passportPhotoUrl = await uploadImageFile(passportPhotoFile);
-      if (paymentScreenshotFile) paymentScreenshotUrl = await uploadImageFile(paymentScreenshotFile);
+      if (cnicFrontFile) {
+        cnicFrontUrl = await uploadImageFile(cnicFrontFile);
+      } else if (cnicFrontPreview && !cnicFrontPreview.startsWith('blob:')) {
+        cnicFrontUrl = cnicFrontPreview;
+      }
+
+      if (cnicBackFile) {
+        cnicBackUrl = await uploadImageFile(cnicBackFile);
+      } else if (cnicBackPreview && !cnicBackPreview.startsWith('blob:')) {
+        cnicBackUrl = cnicBackPreview;
+      }
+
+      if (passportPhotoFile) {
+        passportPhotoUrl = await uploadImageFile(passportPhotoFile);
+      } else if (passportPhotoPreview && !passportPhotoPreview.startsWith('blob:')) {
+        passportPhotoUrl = passportPhotoPreview;
+      }
+
+      if (paymentScreenshotFile) {
+        paymentScreenshotUrl = await uploadImageFile(paymentScreenshotFile);
+      } else if (paymentScreenshotPreview && !paymentScreenshotPreview.startsWith('blob:')) {
+        paymentScreenshotUrl = paymentScreenshotPreview;
+      }
 
       const selectedJobObj = availableJobsList.find(j => j.title === jobPosition);
 
@@ -1019,7 +1039,10 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                 </button>
 
                 <a
-                  href={`https://wa.me/${(config.whatsappNumber || '03018899771').replace(/\D/g, '')}?text=${encodeURIComponent(`Hello JobsHub Official Team, I have submitted my application (Reference ID: ${submittedApp.referenceNo}, Candidate: ${submittedApp.fullName}, Position: ${submittedApp.jobPosition}). Please guide me on next steps.`)}`}
+                  href={buildWhatsAppUrl(
+                    config.whatsappNumber,
+                    `Hello JobsHub Official Team, I have submitted my application (Reference ID: ${submittedApp.referenceNo}, Candidate: ${submittedApp.fullName}, Position: ${submittedApp.jobPosition}). Please guide me on next steps.`
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"

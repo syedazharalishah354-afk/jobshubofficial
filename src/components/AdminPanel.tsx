@@ -20,6 +20,7 @@ import {
   bulkUnpublishAdminJobs,
   bulkDeleteAdminJobs
 } from '../services/api';
+import { validateWhatsAppNumber } from '../utils/whatsapp';
 import {
   Lock,
   LogOut,
@@ -28,6 +29,7 @@ import {
   CheckCircle2,
   XCircle,
   FileText,
+  MessageCircle,
   Search,
   Filter,
   Eye,
@@ -66,6 +68,165 @@ interface AdminPanelProps {
   onRefreshConfig?: () => void;
   onViewSlip?: (app: Application) => void;
 }
+
+function getValidMediaUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith('blob:')) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/')) return trimmed;
+  return `/${trimmed}`;
+}
+
+function isPdfOrDocFile(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return lower.endsWith('.pdf') ||
+         lower.endsWith('.doc') ||
+         lower.endsWith('.docx') ||
+         lower.includes('application/pdf') ||
+         lower.includes('application/msword') ||
+         lower.includes('application/vnd.openxmlformats');
+}
+
+interface DocPreviewCardProps {
+  title: string;
+  url: string | null | undefined;
+  cnic?: string;
+  filenamePrefix: string;
+}
+
+const DocPreviewCard: React.FC<DocPreviewCardProps> = ({ title, url, cnic, filenamePrefix }) => {
+  const [imgError, setImgError] = useState(false);
+  const cleanUrl = getValidMediaUrl(url);
+
+  if (!cleanUrl) {
+    return (
+      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between h-full min-h-[120px]">
+        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{title}</span>
+        <div className="my-auto py-2">
+          <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
+        </div>
+      </div>
+    );
+  }
+
+  const isDoc = isPdfOrDocFile(cleanUrl) || imgError;
+  const fileName = `${filenamePrefix}_${cnic || 'Candidate'}.${isDoc ? 'pdf' : 'jpg'}`;
+
+  return (
+    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between h-full min-h-[120px]">
+      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{title}</span>
+
+      {!isDoc ? (
+        <div className="space-y-1.5 my-auto">
+          <img
+            src={cleanUrl}
+            alt={title}
+            onError={() => setImgError(true)}
+            className="h-20 w-full object-cover rounded border border-slate-300 bg-white"
+          />
+          <div className="flex flex-col gap-1">
+            <a
+              href={cleanUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-blue-600 font-bold block hover:underline"
+            >
+              View Full &rarr;
+            </a>
+            <a
+              href={cleanUrl}
+              download={fileName}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block transition-colors text-center"
+            >
+              Download 📥
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2 my-auto p-2 bg-white rounded-lg border border-slate-200">
+          <div className="flex items-center justify-center gap-1.5 text-blue-700">
+            <FileText className="w-5 h-5 text-blue-600" />
+            <span className="text-[10px] font-bold uppercase">Document File</span>
+          </div>
+          <div className="flex flex-col gap-1 pt-1">
+            <a
+              href={cleanUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] bg-blue-600 text-white font-bold py-1 px-2 rounded hover:bg-blue-700 block transition-colors text-center"
+            >
+              View Document &rarr;
+            </a>
+            <a
+              href={cleanUrl}
+              download={fileName}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block transition-colors text-center"
+            >
+              Download 📥
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PaymentProofPreview: React.FC<{ url: string | null | undefined; cnic?: string }> = ({ url, cnic }) => {
+  const [imgError, setImgError] = useState(false);
+  const cleanUrl = getValidMediaUrl(url);
+
+  if (!cleanUrl) {
+    return <span className="text-slate-400 italic text-xs">No payment screenshot attached.</span>;
+  }
+
+  const isDoc = isPdfOrDocFile(cleanUrl) || imgError;
+  const fileName = `Payment_Proof_${cnic || 'Applicant'}.${isDoc ? 'pdf' : 'jpg'}`;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-3">
+      {!isDoc ? (
+        <img
+          src={cleanUrl}
+          alt="Payment Screenshot Proof"
+          onError={() => setImgError(true)}
+          className="h-28 w-full sm:w-48 object-cover rounded-lg border border-slate-300 shadow-xs bg-white"
+        />
+      ) : (
+        <div className="h-28 w-full sm:w-48 bg-slate-100 rounded-lg border border-slate-300 flex flex-col items-center justify-center p-2 text-center">
+          <FileText className="w-8 h-8 text-blue-600 mb-1" />
+          <span className="text-[10px] font-bold text-slate-700">Payment Document</span>
+        </div>
+      )}
+      <div className="flex flex-col gap-2 w-full sm:w-auto">
+        <a
+          href={cleanUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg text-center transition-colors shadow-xs"
+        >
+          View Full Screenshot &rarr;
+        </a>
+        <a
+          href={cleanUrl}
+          download={fileName}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg text-center transition-colors shadow-xs"
+        >
+          Download Screenshot 📥
+        </a>
+      </div>
+    </div>
+  );
+};
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefreshConfig, onViewSlip }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('admin_token'));
@@ -390,12 +551,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
     e.preventDefault();
     if (!token || !settingsForm) return;
 
+    if (settingsForm.whatsappNumber) {
+      const waCheck = validateWhatsAppNumber(settingsForm.whatsappNumber);
+      if (!waCheck.isValid) {
+        alert(waCheck.message || 'Invalid WhatsApp number.');
+        return;
+      }
+    }
+
     setSavingSettings(true);
     setSettingsSuccess(null);
 
     try {
       await updateSystemSettings(token, settingsForm);
-      setSettingsSuccess('Payment configuration and application fee updated successfully.');
+      setSettingsSuccess('Settings & official WhatsApp support number updated successfully.');
       if (onRefreshConfig) onRefreshConfig();
     } catch (err: any) {
       alert(err.message || 'Failed to save settings');
@@ -1278,6 +1447,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
 
                     <div className="pt-4 border-t border-slate-100 space-y-4">
                       <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        Official Support WhatsApp Number
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Candidates will automatically be routed to this WhatsApp number when clicking the "Contact on WhatsApp" button after submitting an application.
+                      </p>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 text-xs mb-1">Official WhatsApp Number</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 0301-8899771 or 923018899771"
+                          value={settingsForm.whatsappNumber || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            whatsappNumber: e.target.value
+                          })}
+                          className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-600 font-mono"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Accepts Pakistani standard format (e.g. <code className="bg-slate-100 px-1 rounded">0301-8899771</code>) or international format (e.g. <code className="bg-slate-100 px-1 rounded">+923018899771</code>).
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
                         <Upload className="w-4 h-4 text-blue-600" />
                         JazzCash Merchant Account
                       </h4>
@@ -1354,7 +1551,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                       className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {savingSettings ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                      <span>Save Payment Configurations</span>
+                      <span>Save Settings &amp; Update WhatsApp Number</span>
                     </button>
                   </form>
 
@@ -1582,21 +1779,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                   {/* Fee Payment Screenshot Image Preview & Download */}
                   <div className="bg-white p-3 rounded-xl border border-blue-200">
                     <span className="text-[10px] font-extrabold text-slate-600 uppercase block mb-2">Fee Payment Screenshot Proof</span>
-                    {selectedApp.paymentScreenshotUrl ? (
-                      <div className="flex flex-col sm:flex-row items-center gap-3">
-                        <img src={selectedApp.paymentScreenshotUrl} alt="Payment Screenshot Proof" className="h-28 w-full sm:w-48 object-cover rounded-lg border border-slate-300 shadow-xs" />
-                        <div className="flex flex-col gap-2 w-full sm:w-auto">
-                          <a href={selectedApp.paymentScreenshotUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg text-center transition-colors">
-                            View Full Screenshot &rarr;
-                          </a>
-                          <a href={selectedApp.paymentScreenshotUrl} download={`Payment_Proof_${selectedApp.cnic || 'Applicant'}.jpg`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg text-center transition-colors">
-                            Download Screenshot 📥
-                          </a>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 italic text-xs">No payment screenshot attached.</span>
-                    )}
+                    <PaymentProofPreview url={selectedApp.paymentScreenshotUrl} cnic={selectedApp.cnic} />
                   </div>
                 </div>
 
@@ -1604,112 +1787,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                 <div className="space-y-3">
                   <h5 className="font-black text-slate-900 uppercase tracking-wider text-[11px]">3. Uploaded Candidate Documents</h5>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    
-                    {/* CNIC Front */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CNIC Front</span>
-                      {selectedApp.cnicFrontUrl ? (
-                        <div className="space-y-1.5">
-                          <img src={selectedApp.cnicFrontUrl} alt="CNIC Front" className="h-20 w-full object-cover rounded border" />
-                          <div className="flex flex-col gap-1">
-                            <a href={selectedApp.cnicFrontUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block hover:underline">
-                              View Full &rarr;
-                            </a>
-                            <a href={selectedApp.cnicFrontUrl} download={`CNIC_Front_${selectedApp.cnic}.jpg`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
-                              Download 📥
-                            </a>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
-                      )}
-                    </div>
-
-                    {/* CNIC Back */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CNIC Back</span>
-                      {selectedApp.cnicBackUrl ? (
-                        <div className="space-y-1.5">
-                          <img src={selectedApp.cnicBackUrl} alt="CNIC Back" className="h-20 w-full object-cover rounded border" />
-                          <div className="flex flex-col gap-1">
-                            <a href={selectedApp.cnicBackUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block hover:underline">
-                              View Full &rarr;
-                            </a>
-                            <a href={selectedApp.cnicBackUrl} download={`CNIC_Back_${selectedApp.cnic}.jpg`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
-                              Download 📥
-                            </a>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
-                      )}
-                    </div>
-
-                    {/* Passport Photo */}
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Passport Photo</span>
-                      {selectedApp.passportPhotoUrl ? (
-                        <div className="space-y-1.5">
-                          <img src={selectedApp.passportPhotoUrl} alt="Passport Photo" className="h-20 w-full object-cover rounded border" />
-                          <div className="flex flex-col gap-1">
-                            <a href={selectedApp.passportPhotoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block hover:underline">
-                              View Full &rarr;
-                            </a>
-                            <a href={selectedApp.passportPhotoUrl} download={`Passport_Photo_${selectedApp.cnic}.jpg`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
-                              Download 📥
-                            </a>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic text-[10px]">Not Uploaded</span>
-                      )}
-                    </div>
-
-                    {/* Education Cert */}
-                    {selectedApp.educationCertUrl && (
-                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Educational Certificate</span>
-                        <div className="space-y-1">
-                          <a href={selectedApp.educationCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] hover:underline block">
-                            View Document &rarr;
-                          </a>
-                          <a href={selectedApp.educationCertUrl} download target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
-                            Download 📥
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Experience Cert */}
-                    {selectedApp.experienceCertUrl && (
-                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Experience Certificate</span>
-                        <div className="space-y-1">
-                          <a href={selectedApp.experienceCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] hover:underline block">
-                            View Experience Cert &rarr;
-                          </a>
-                          <a href={selectedApp.experienceCertUrl} download target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
-                            Download 📥
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* CV / Resume */}
-                    {selectedApp.resumeUrl && (
-                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">CV / Resume</span>
-                        <div className="space-y-1">
-                          <a href={selectedApp.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] hover:underline block">
-                            View CV Document &rarr;
-                          </a>
-                          <a href={selectedApp.resumeUrl} download target="_blank" rel="noopener noreferrer" className="text-[9px] text-slate-700 font-bold bg-slate-200 px-2 py-0.5 rounded hover:bg-slate-300 block">
-                            Download 📥
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
+                    <DocPreviewCard title="CNIC Front" url={selectedApp.cnicFrontUrl} cnic={selectedApp.cnic} filenamePrefix="CNIC_Front" />
+                    <DocPreviewCard title="CNIC Back" url={selectedApp.cnicBackUrl} cnic={selectedApp.cnic} filenamePrefix="CNIC_Back" />
+                    <DocPreviewCard title="Passport Photo" url={selectedApp.passportPhotoUrl} cnic={selectedApp.cnic} filenamePrefix="Passport_Photo" />
+                    <DocPreviewCard title="Educational Certificate" url={selectedApp.educationCertUrl} cnic={selectedApp.cnic} filenamePrefix="Education_Cert" />
+                    <DocPreviewCard title="Experience Certificate" url={selectedApp.experienceCertUrl} cnic={selectedApp.cnic} filenamePrefix="Experience_Cert" />
+                    <DocPreviewCard title="CV / Resume" url={selectedApp.resumeUrl} cnic={selectedApp.cnic} filenamePrefix="CV_Resume" />
+                    <DocPreviewCard title="Other Document" url={selectedApp.otherDocUrl} cnic={selectedApp.cnic} filenamePrefix="Other_Document" />
                   </div>
                 </div>
 
