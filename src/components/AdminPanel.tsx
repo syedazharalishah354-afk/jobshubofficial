@@ -343,15 +343,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
     }
   };
 
-  // Load Admin Data on Auth
+  // Load Admin Data on Auth with Real-Time Synchronization
   useEffect(() => {
-    if (token) {
+    if (token && isOpen) {
       loadStats();
       loadApplications();
       loadSettings();
       loadAdminJobs();
+
+      const timer = setInterval(() => {
+        loadStats();
+        loadApplications();
+      }, 5000);
+
+      return () => clearInterval(timer);
     }
-  }, [token, selectedStatusFilter]);
+  }, [token, isOpen, selectedStatusFilter]);
 
   const handleOpenAddJob = () => {
     setEditingJob({
@@ -961,6 +968,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                           {st} Applications
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          loadStats();
+                          loadApplications();
+                        }}
+                        disabled={loadingApps}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 ml-auto sm:ml-2"
+                        title="Refresh application list from server"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loadingApps ? 'animate-spin' : ''}`} />
+                        <span>Refresh</span>
+                      </button>
                     </div>
 
                     <div className="relative w-full sm:w-64">

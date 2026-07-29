@@ -168,18 +168,21 @@ export async function submitApplicationStep1(payload: {
       body: JSON.stringify(payload)
     });
 
-    if (res.ok) {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        if (data && data.application) {
-          saveLocalApplication(data.application);
-          return data;
-        }
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.application) {
+        saveLocalApplication(data.application);
+        return data;
       }
+    } else if (!res.ok) {
+      const data = contentType.includes('application/json') ? await res.json() : {};
+      throw new Error(data.error || 'Failed to submit application to server.');
     }
-  } catch {
-    // Fallback to local submission
+  } catch (err: any) {
+    if (err.message && err.message !== 'Failed to fetch' && !err.message.includes('Unexpected') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const refNum = `JHO-2026-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -450,10 +453,34 @@ export async function fetchAdminStats(token: string): Promise<ApplicationStats> 
     totalUsers: 1,
     totalJobs: DEFAULT_JOBS.length,
     totalApplications: localApps.length,
-    pendingPayments: localApps.filter(a => a.status === 'Payment Verification Pending' || a.status === 'Payment Pending').length,
-    approvedPayments: localApps.filter(a => a.status === 'Submitted Successfully').length,
-    rejectedPayments: localApps.filter(a => a.status === 'Payment Rejected').length,
-    submittedSuccessfully: localApps.filter(a => a.status === 'Submitted Successfully').length
+    pendingPayments: localApps.filter(a =>
+      a.status === 'Payment Verification Pending' ||
+      a.status === 'Payment Pending' ||
+      a.status === 'Auto-Approved / Preliminary Approval' ||
+      a.status === 'Under Review' ||
+      a.status === 'Submitted' ||
+      a.status.toLowerCase().includes('pending') ||
+      a.status.toLowerCase().includes('preliminary')
+    ).length,
+    approvedPayments: localApps.filter(a =>
+      a.status === 'Payment Approved' ||
+      a.status === 'Submitted Successfully' ||
+      a.status === 'Shortlisted' ||
+      a.status === 'Selected' ||
+      a.status === 'Auto-Approved' ||
+      a.status.toLowerCase().includes('approved')
+    ).length,
+    rejectedPayments: localApps.filter(a =>
+      a.status === 'Payment Rejected' ||
+      a.status === 'Rejected' ||
+      a.status.toLowerCase().includes('reject')
+    ).length,
+    submittedSuccessfully: localApps.filter(a =>
+      a.status === 'Submitted Successfully' ||
+      a.status === 'Auto-Approved / Preliminary Approval' ||
+      a.status === 'Auto-Approved' ||
+      a.status === 'Submitted'
+    ).length
   };
 }
 
@@ -479,7 +506,35 @@ export async function fetchAdminApplications(
 
   let localApps = getLocalApplications();
   if (status && status !== 'all') {
-    localApps = localApps.filter(a => a.status === status);
+    const sLower = status.toLowerCase();
+    if (sLower === 'pending') {
+      localApps = localApps.filter(a =>
+        a.status === 'Payment Verification Pending' ||
+        a.status === 'Payment Pending' ||
+        a.status === 'Auto-Approved / Preliminary Approval' ||
+        a.status === 'Under Review' ||
+        a.status === 'Submitted' ||
+        a.status.toLowerCase().includes('pending') ||
+        a.status.toLowerCase().includes('preliminary')
+      );
+    } else if (sLower === 'approved') {
+      localApps = localApps.filter(a =>
+        a.status === 'Payment Approved' ||
+        a.status === 'Submitted Successfully' ||
+        a.status === 'Shortlisted' ||
+        a.status === 'Selected' ||
+        a.status === 'Auto-Approved' ||
+        a.status.toLowerCase().includes('approved')
+      );
+    } else if (sLower === 'rejected') {
+      localApps = localApps.filter(a =>
+        a.status === 'Payment Rejected' ||
+        a.status === 'Rejected' ||
+        a.status.toLowerCase().includes('reject')
+      );
+    } else {
+      localApps = localApps.filter(a => a.status === status);
+    }
   }
   if (search && search.trim()) {
     const s = search.toLowerCase().trim();
